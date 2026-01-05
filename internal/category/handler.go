@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"InventoryManagement/pkg/validation"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -15,13 +17,22 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	group := r.Group("/categories")
 	{
 		group.POST("", func(c *gin.Context) {
-			var category Category
-			if err := c.ShouldBindJSON(&category); err != nil {
+			var req CreateCategoryRequest
+			if err := c.ShouldBindJSON(&req); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
 			}
+
+			if err := validation.Validate.Struct(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+			category := Category{
+				Name: req.Name,
+			}
+
 			if err := service.Create(&category); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
 			}
 			c.JSON(http.StatusCreated, category)

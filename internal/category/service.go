@@ -1,5 +1,7 @@
 package category
 
+import "InventoryManagement/pkg/validation"
+
 type Service interface {
 	Create(category *Category) error
 	List() ([]Category, error)
@@ -16,6 +18,9 @@ func NewService(repo Repository) Service {
 }
 
 func (s *service) Create(c *Category) error {
+	if err := validation.Validate.Struct(c); err != nil {
+		return err
+	}
 	return s.repo.Create(c)
 }
 
