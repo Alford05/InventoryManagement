@@ -1,6 +1,6 @@
 package product
 
-type ListProductQuery struct {
+type ListProductsQuery struct {
 	Category string  `form:"category"`
 	MinPrice float64 `form:"min_price" validate:"omitempty,gte=0"`
 	MaxPrice float64 `form:"max_price" validate:"omitempty,gte=0"`

@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"InventoryManagement/pkg/validation"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -28,12 +30,36 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 		})
 
 		group.GET("", func(c *gin.Context) {
-			filters := make(map[string]interface{})
-			if category := c.DefaultQuery("category", ""); category != "" {
-				filters["category"] = category
+			var query ListProductsQuery
+
+			if err := c.ShouldBindQuery(&query); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
 			}
-			products, _ := service.List(filters)
-			c.JSON(http.StatusOK, products)
+			if err := validation.Validate.Struct(&query); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			if query.Page == 0 {
+				query.Page = 1
+			}
+			if query.PageSize == 0 {
+				query.PageSize = 20
+			}
+
+			products, total, err := service.List(&query)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{
+				"data":      products,
+				"total":     total,
+				"page":      query.Page,
+				"page_size": query.PageSize,
+			})
 		})
 
 		group.GET("/:id", func(c *gin.Context) {

@@ -4,7 +4,7 @@ import "gorm.io/gorm"
 
 type Repository interface {
 	Create(product *Product) error
-	FindAll(filters map[string]interface{}) ([]Product, error)
+	FindAll(query *ListProductsQuery) ([]Product, int64, error)
 	FindByID(id uint) (*Product, error)
 	Update(id uint, product *Product) error
 	Delete(id uint) error
@@ -23,10 +23,32 @@ func (r *repository) Create(p *Product) error {
 	return r.db.Create(p).Error
 }
 
-func (r *repository) FindAll(filters map[string]interface{}) ([]Product, error) {
+func (r *repository) FindAll(query *ListProductsQuery) ([]Product, int64, error) {
 	var products []Product
-	err := r.db.Where(filters).Find(&products).Error
-	return products, err
+	dbQuery := r.db.Model(&Product{})
+
+	if query.Category != "" {
+		dbQuery = dbQuery.Where("category_id = ?", query.Category)
+	}
+	if query.MinPrice > 0 {
+		dbQuery = dbQuery.Where("price >= ?", query.MinPrice)
+	}
+	if query.MaxPrice > 0 {
+		dbQuery.Where("price <= ?", query.MaxPrice)
+	}
+	if query.Search != "" {
+		search := "%" + query.Search + "%"
+		dbQuery = dbQuery.Where("name ILIKE ? OR description ILIKE ?", search, search)
+	}
+
+	var total int64
+	dbQuery.Count(&total)
+
+	offset := (query.Page - 1) * query.PageSize
+	dbQuery = dbQuery.Offset(offset).Limit(query.PageSize)
+
+	err := dbQuery.Find(&products).Error
+	return products, total, err
 }
 
 func (r *repository) FindByID(id uint) (*Product, error) {

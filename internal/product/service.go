@@ -4,7 +4,7 @@ import "InventoryManagement/pkg/validation"
 
 type Service interface {
 	Create(product *Product) error
-	List(filters map[string]interface{}) ([]Product, error)
+	List(query *ListProductsQuery) ([]Product, int64, error)
 	Get(id uint) (*Product, error)
 	Update(id uint, product *Product) error
 	Delete(id uint) error
@@ -25,8 +25,8 @@ func (s *service) Create(p *Product) error {
 	return s.repo.Create(p)
 }
 
-func (s *service) List(filters map[string]interface{}) ([]Product, error) {
-	return s.repo.FindAll(filters)
+func (s *service) List(query *ListProductsQuery) ([]Product, int64, error) {
+	return s.repo.FindAll(query)
 }
 
 func (s *service) Get(id uint) (*Product, error) {
