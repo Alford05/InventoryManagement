@@ -10,11 +10,35 @@ import (
 
 type Service interface {
 	CreateOrder(req *CreateOrderRequest) (*Order, error)
+	GetOrder(id uint) (*Order, error)
+	ListOrders(customerID uint) ([]Order, error)
 }
 
 type service struct {
 	db   *gorm.DB
 	repo Repository
+}
+
+func (s *service) GetOrder(id uint) (*Order, error) {
+	var order Order
+	err := s.db.Preload("Items").First(&order, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &order, nil
+}
+
+func (s *service) ListOrders(customerID uint) ([]Order, error) {
+	var orders []Order
+	query := s.db.Preload("Items")
+	if customerID != 0 {
+		query = query.Where("customer_id = ?", customerID)
+	}
+	err := query.Find(&orders).Error
+	if err != nil {
+		return nil, err
+	}
+	return orders, nil
 }
 
 func NewService(db *gorm.DB, repo Repository) Service {
