@@ -12,6 +12,8 @@ type Service interface {
 	CreateOrder(req *CreateOrderRequest) (*Order, error)
 	GetOrder(id uint) (*Order, error)
 	ListOrders(customerID uint) ([]Order, error)
+	UpdateOrderStatus(orderID uint, req *UpdateOrderStatusRequest) (*Order, error)
+	CancelOrder(orderID uint) (*Order, error)
 }
 
 type service struct {
@@ -98,6 +100,55 @@ func (s *service) CreateOrder(req *CreateOrderRequest) (*Order, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := s.db.Preload("Items").First(&order, order.ID).Error; err != nil {
+		return nil, err
+	}
 
+	return &order, nil
+}
+
+func (s *service) UpdateOrderStatus(orderID uint, req *UpdateOrderStatusRequest) (*Order, error) {
+	if err := validation.Validate.Struct(req); err != nil {
+		return nil, err
+	}
+	var order Order
+	if err := s.db.First(&order, orderID).Error; err != nil {
+		return nil, err
+	}
+	order.Status = OrderStatus(req.Status)
+	if err := s.db.Save(&order).Error; err != nil {
+		return nil, err
+	}
+	return &order, nil
+}
+
+func (s *service) CancelOrder(orderID uint) (*Order, error) {
+	var order Order
+
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Preload("Items").First(&order, orderID).Error; err != nil {
+			return err
+		}
+		if order.Status == StatusShipped || order.Status == StatusCanceled {
+			return errors.New("cannot cancel shipped or already canceled order")
+		}
+		for _, item := range order.Items {
+			if err := tx.
+				Table("products").
+				Where("id = ?", item.ProductID).
+				Update("stock", gorm.Expr("stock + ?", item.Quantity)).
+				Error; err != nil {
+				return err
+			}
+		}
+		order.Status = StatusCanceled
+		if err := tx.Save(&order).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
 	return &order, nil
 }

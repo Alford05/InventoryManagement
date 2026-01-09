@@ -1,6 +1,9 @@
 package order
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+)
 
 type Repository interface {
 	WithTx(tx *gorm.DB) Repository
@@ -41,7 +44,7 @@ func (r *repository) FindProductForUpdate(productID uint) (*ProductSnapshot, err
 	var p ProductSnapshot
 	err := r.db.
 		Table("products").
-		Clauses(gorm.Expr("FOR UPDATE")).
+		Clauses(clause.Locking{Strength: "UPDATE"}).
 		Where("id = ?", productID).
 		First(&p).Error
 	return &p, err

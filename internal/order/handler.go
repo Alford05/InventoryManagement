@@ -35,6 +35,26 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 			c.JSON(http.StatusCreated, order)
 		})
 
+		// PUT /order/id/status -> update order status
+		group.PUT("/:id/status", func(c *gin.Context) {
+			id, err := strconv.Atoi(c.Param("id"))
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order id"})
+				return
+			}
+			var req UpdateOrderStatusRequest
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+			order, err := service.UpdateOrderStatus(uint(id), &req)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, order)
+		})
+
 		// GET /orders/:id -> view single order
 		group.GET("/:id", func(c *gin.Context) {
 			id, err := strconv.Atoi(c.Param("id"))
@@ -70,6 +90,20 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 				return
 			}
 			c.JSON(http.StatusOK, orders)
+		})
+
+		group.DELETE("/:id", func(c *gin.Context) {
+			id, err := strconv.Atoi(c.Param("id"))
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order id"})
+				return
+			}
+			order, err := service.CancelOrder(uint(id))
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, order)
 		})
 	}
 }

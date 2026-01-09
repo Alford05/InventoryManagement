@@ -2,18 +2,32 @@ package order
 
 import "time"
 
+type OrderStatus string
+
+const (
+	StatusPending  OrderStatus = "pending"
+	StatusPaid     OrderStatus = "paid"
+	StatusShipped  OrderStatus = "shipped"
+	StatusCanceled OrderStatus = "canceled"
+)
+
 type Order struct {
-	ID         uint        `json:"id" gorm:"primaryKey"`
-	CustomerID uint        `json:"customer_id" gorm:"not null"`
-	Status     Status      `json:"status" gorm:"type:varchar(20);not null"`
-	Items      []OrderItem `json:"items" gorm:"foreignKey:OrderID"`
-	CreatedAt  time.Time   `json:"created_at"`
+	ID         uint        `gorm:"primaryKey"`
+	CustomerID uint        `gorm:"not null;index"`
+	Status     OrderStatus `gorm:"type:varchar(20);default:'pending'"`
+	Items      []OrderItem `gorm:"foreignKey:OrderID"`
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 type OrderItem struct {
-	ID        uint    `json:"id" gorm:"primaryKey"`
-	OrderID   uint    `json:"order_id" gorm:"not null"`
-	ProductID uint    `json:"product_id" gorm:"not null"`
-	Quantity  int     `json:"quantity" validate:"required,gt=0"`
-	UnitPrice float64 `json:"unit_price"`
+	ID        uint    `gorm:"primaryKey"`
+	OrderID   uint    `gorm:"not null"`
+	ProductID uint    `gorm:"not null"`
+	Quantity  int     `gorm:"not null"`
+	UnitPrice float64 `gorm:"not null"`
+}
+
+type UpdateOrderStatusRequest struct {
+	Status OrderStatus `json:"status" validate:"required,oneof=pending paid shipped canceled"`
 }
