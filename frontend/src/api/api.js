@@ -30,4 +30,18 @@ export async function createOrder(data) {
   return res.json();
 }
 
+export async function updateOrderStatus(orderId, status) {
+  const res = await fetch(`${API_BASE}/orders/${orderId}/status`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  return res.json();
+}
 
+export async function cancelOrder(orderId) {
+  const res = await fetch(`${API_BASE}/orders/${orderId}`, {
+    method: "DELETE",
+  });
+  return res.json();
+}
