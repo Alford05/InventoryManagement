@@ -24,7 +24,10 @@ export async function fetchOrders(customerId) {
 export async function createOrder(data) {
   const res = await fetch(`${API_BASE}/orders`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify(data),
   });
   return res.json();

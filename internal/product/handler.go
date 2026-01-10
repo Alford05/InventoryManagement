@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"InventoryManagement/pkg/middleware"
 	"InventoryManagement/pkg/validation"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +17,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 
 	group := r.Group("/products")
 	{
-		group.POST("", func(c *gin.Context) {
+		group.POST("", middleware.AuthRequired(), middleware.AdminOnly(), func(c *gin.Context) {
 			var product Product
 			if err := c.ShouldBindJSON(&product); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -72,7 +73,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 			c.JSON(http.StatusOK, product)
 		})
 
-		group.PUT("/:id", func(c *gin.Context) {
+		group.PUT("/:id", middleware.AuthRequired(), middleware.AdminOnly(), func(c *gin.Context) {
 			id, _ := strconv.Atoi(c.Param("id"))
 			var product Product
 			if err := c.ShouldBindJSON(&product); err != nil {
@@ -86,7 +87,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 			c.JSON(http.StatusOK, product)
 		})
 
-		group.DELETE("/:id", func(c *gin.Context) {
+		group.DELETE("/:id", middleware.AuthRequired(), middleware.AdminOnly(), func(c *gin.Context) {
 			id, _ := strconv.Atoi(c.Param("id"))
 			if err := service.Delete(uint(id)); err != nil {
 				c.JSON(http.StatusNotFound, gin.H{"error": "not found"})

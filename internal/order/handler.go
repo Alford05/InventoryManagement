@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"InventoryManagement/pkg/middleware"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -13,6 +15,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	service := NewService(db, repo)
 
 	group := r.Group("/orders")
+	group.Use(middleware.AuthRequired())
 	{
 		// POST /orders -> create a new order
 		group.POST("", func(c *gin.Context) {
@@ -23,6 +26,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
 			}
+			req.CustomerID = c.GetUint("user_id")
 
 			// 2️⃣ Call service
 			order, err := service.CreateOrder(&req)
@@ -68,21 +72,25 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 				return
 			}
+			userID := c.GetUint("user_id")
+			role := c.GetString("role")
+
+			if role != "admin" && order.CustomerID != userID {
+				c.JSON(http.StatusForbidden, gin.H{"error": "not your order"})
+				return
+			}
 
 			c.JSON(http.StatusOK, order)
 		})
 
 		// Optional: list orders
 		group.GET("", func(c *gin.Context) {
-			customerIDStr := c.Query("customer_id")
+			userID := c.GetUint("user_id")
+			role := c.GetString("role")
+
 			var customerID uint
-			if customerIDStr != "" {
-				id, err := strconv.Atoi(customerIDStr)
-				if err != nil {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "invalid customer_id"})
-					return
-				}
-				customerID = uint(id)
+			if role != "admin" {
+				customerID = userID
 			}
 			orders, err := service.ListOrders(customerID)
 			if err != nil {
@@ -98,12 +106,25 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order id"})
 				return
 			}
-			order, err := service.CancelOrder(uint(id))
+
+			order, err := service.GetOrder(uint(id))
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+				return
+			}
+			userID := c.GetUint("user_id")
+			role := c.GetString("role")
+
+			if role != "admin" && order.CustomerID != userID {
+				c.JSON(http.StatusForbidden, gin.H{"error": "not your order"})
+				return
+			}
+			canceled, err := service.CancelOrder(uint(id))
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
 			}
-			c.JSON(http.StatusOK, order)
+			c.JSON(http.StatusOK, canceled)
 		})
 	}
 }
