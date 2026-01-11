@@ -23,5 +23,11 @@ func main() {
 	product.RegisterRoutes(r, database)
 	order.RegisterRoutes(r, database)
 
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "Inventory API is running",
+		})
+	})
+
 	r.Run(fmt.Sprintf(":%d", cfg.Server.Port))
 }

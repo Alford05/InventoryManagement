@@ -2,7 +2,9 @@ package configs
 
 import (
 	"os"
+	"strconv"
 
+	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
 )
 
@@ -22,14 +24,31 @@ type Config struct {
 }
 
 func LoadConfig() *Config {
-	cfg := &Config{}
+	cfg := &Config{
+		Server: struct {
+			Port int `yaml:"port"`
+		}{
+			Port: 8080,
+		},
+		Database: DatabaseConfig{
+			Port: 5432,
+		},
+	}
 
-	file, err := os.ReadFile("configs/config.yaml")
-	if err == nil {
+	_ = godotenv.Load()
+
+	if file, err := os.ReadFile("configs/config.yaml"); err == nil {
 		_ = yaml.Unmarshal(file, cfg)
 	}
+	if v := os.Getenv("SERVER_PORT"); v != "" {
+		cfg.Server.Port = mustInt(v)
+	}
+
 	if v := os.Getenv("DB_HOST"); v != "" {
 		cfg.Database.Host = v
+	}
+	if v := os.Getenv("DB_PORT"); v != "" {
+		cfg.Database.Port = mustInt(v)
 	}
 	if v := os.Getenv("DB_USER"); v != "" {
 		cfg.Database.User = v
@@ -42,4 +61,9 @@ func LoadConfig() *Config {
 	}
 
 	return cfg
+}
+
+func mustInt(v string) int {
+	i, _ := strconv.Atoi(v)
+	return i
 }
